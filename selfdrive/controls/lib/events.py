@@ -418,7 +418,8 @@ EventName.stockAeb: {
         "استخدم المكابح!",
         "نظام الكبح الطارئ الافتراضي (AEB): خطر التصادم",
         AlertStatus.critical, AlertSize.full,
-        Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.none, 2.),
+        Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.none, 2.0
+    ),
     ET.NO_ENTRY: NoEntryAlert("نظام الكبح الطارئ الافتراضي (AEB): خطر التصادم"),
 },
 
@@ -427,8 +428,10 @@ EventName.fcw: {
         "استخدم المكابح!",
         "خطر التصادم",
         AlertStatus.critical, AlertSize.full,
-        Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.warningSoft, 2.),
+        Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.warningSoft, 2.0
+    ),
 },
+
 
 EventName.ldw: {
     ET.PERMANENT: Alert(
