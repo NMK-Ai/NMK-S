@@ -1,1 +1,1 @@
-#define COMMA_VERSION "2024.09.30-3441"
+#define COMMA_VERSION "القائد الآلي"
