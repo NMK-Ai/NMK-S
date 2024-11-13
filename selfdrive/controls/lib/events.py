@@ -411,7 +411,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
                                            '⚙️ -> "المركبة" لاختيار سيارتك',
                                            priority=Priority.LOWEST),
     },
-}
+},
 
 EventName.stockAeb: {
     ET.PERMANENT: Alert(
