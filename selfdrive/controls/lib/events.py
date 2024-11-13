@@ -155,26 +155,26 @@ class NoEntryAlert(Alert):
 
 class SoftDisableAlert(Alert):
   def __init__(self, alert_text_2: str):
-    super().__init__("استلم القيادة فوراً", alert_text_2,
+    super().__init__("تولي التحكم فوراً", alert_text_2,
                      AlertStatus.userPrompt, AlertSize.full,
                      Priority.MID, VisualAlert.steerRequired,
-                     AudibleAlert.warningSoft, 2.),
+                     AudibleAlert.warningSoft, 2.)
 
 
-# less harsh version of SoftDisable, where the condition is user-triggered
+# نسخة أقل حدة من SoftDisable، حيث يكون الشرط ناتجًا عن المستخدم
 class UserSoftDisableAlert(SoftDisableAlert):
   def __init__(self, alert_text_2: str):
-    super().__init__(alert_text_2),
-    self.alert_text_1 = "سيتم فصل القائد الآلي"
+    super().__init__(alert_text_2)
+    self.alert_text_1 = "القائد الآلي سيتوقف"
 
 
 class ImmediateDisableAlert(Alert):
   def __init__(self, alert_text_2: str):
-    super().__init__("استلم القيادة فوراً", alert_text_2,
+    super().__init__("تولي التحكم فوراً", alert_text_2,
                      AlertStatus.critical, AlertSize.full,
                      Priority.HIGHEST, VisualAlert.steerRequired,
-                     AudibleAlert.warningImmediate, 4.),
-
+                     AudibleAlert.warningImmediate, 4.)
+    
 
 class EngagementAlert(Alert):
   def __init__(self, audible_alert: car.CarControl.HUDControl.AudibleAlert):
@@ -192,11 +192,11 @@ class NormalPermanentAlert(Alert):
 
 
 class StartupAlert(Alert):
-  def __init__(self, alert_text_1: str, alert_text_2: str = "حافظ دائماً على يديك على عجلة القيادة وعينيك على الطريق", alert_status=AlertStatus.normal):
+  def __init__(self, alert_text_1: str, alert_text_2: str = "دائماً حافظ على يديك على المقود وعينيك على الطريق", alert_status=AlertStatus.normal):
     super().__init__(alert_text_1, alert_text_2,
                      alert_status, AlertSize.mid,
-                     Priority.LOWER, VisualAlert.none, AudibleAlert.none, 5.),
-
+                     Priority.LOWER, VisualAlert.none, AudibleAlert.none, 5.)
+                     
 
 # ********** helper functions **********
 def get_display_speed(speed_ms: float, metric: bool) -> str:
@@ -229,760 +229,919 @@ def startup_master_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubM
   if "REPLAY" in os.environ:
     branch = "replay"
 
-  return StartupAlert("تحذير: لم يتم اختبار هذه الفرع", branch, alert_status=AlertStatus.userPrompt)
+  return StartupAlert("تحذير: هذا الفرع غير مُختبر", branch, alert_status=AlertStatus.userPrompt)
 
 def below_engage_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    return NoEntryAlert(f"قم بالقيادة بسرعة أعلى من {get_display_speed(CP.minEnableSpeed, metric)} لتفعيل النظام")
+  return NoEntryAlert(f"قد فوق {get_display_speed(CP.minEnableSpeed, metric)} لتفعيل القائد الآلي")
 
 
 def below_steer_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    return Alert(
-        f"التوجيه غير متاح تحت سرعة {get_display_speed(CP.minSteerSpeed, metric)}",
-        "",
-        AlertStatus.userPrompt, AlertSize.small,
-        Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, 0.4)
+  return Alert(
+    f"التوجيه غير متاح تحت {get_display_speed(CP.minSteerSpeed, metric)}",
+    "",
+    AlertStatus.userPrompt, AlertSize.small,
+    Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, 0.4)
 
 
 def calibration_incomplete_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    first_word = 'إعادة المعايرة' if sm['liveCalibration'].calStatus == log.LiveCalibrationData.Status.recalibrating else 'المعايرة'
-    return Alert(
-        f"{first_word} قيد التقدم: {sm['liveCalibration'].calPerc:.0f}%",
-        f"قم بالقيادة بسرعة أعلى من {get_display_speed(MIN_SPEED_FILTER, metric)}",
-        AlertStatus.normal, AlertSize.mid,
-        Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2)
+  first_word = 'إعادة المعايرة' if sm['liveCalibration'].calStatus == log.LiveCalibrationData.Status.recalibrating else 'المعايرة'
+  return Alert(
+    f"{first_word} جارية: {sm['liveCalibration'].calPerc:.0f}%",
+    f"قد فوق {get_display_speed(MIN_SPEED_FILTER, metric)}",
+    AlertStatus.normal, AlertSize.mid,
+    Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2)
 
 
 def torque_nn_load_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    model_name = CP.lateralTuning.torque.nnModelName
-    if model_name in ("", "mock"):
-        return Alert(
-            "لم يتم تحميل وحدة التحكم NN للتوجيه الجانبي",
-            '⚙️ -> "القائد الآلي" للمزيد من التفاصيل',
-            AlertStatus.userPrompt, AlertSize.mid,
-            Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 6.0)
-    else:
-        fuzzy = CP.lateralTuning.torque.nnModelFuzzyMatch
-        alert_text_2 = '⚙️ -> "القائد الآلي" للمزيد من التفاصيل [تطابق = غير دقيق]' if fuzzy else ""
-        alert_status = AlertStatus.userPrompt if fuzzy else AlertStatus.normal
-        alert_size = AlertSize.mid if fuzzy else AlertSize.small
-        audible_alert = AudibleAlert.prompt if fuzzy else AudibleAlert.none
-        return Alert(
-            "تم تحميل وحدة التحكم NN للتوجيه الجانبي",
-            alert_text_2,
-            alert_status, alert_size,
-            Priority.LOW, VisualAlert.none, audible_alert, 6.0)
+  model_name = CP.lateralTuning.torque.nnModelName
+  if model_name in ("", "mock"):
+    return Alert(
+      "لم يتم تحميل وحدة التحكم الجانبية NN",
+      '⚙️ -> "sunnypilot" لمزيد من التفاصيل',
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 6.0)
+  else:
+    fuzzy = CP.lateralTuning.torque.nnModelFuzzyMatch
+    alert_text_2 = '⚙️ -> "sunnypilot" لمزيد من التفاصيل [التطابق غير دقيق]' if fuzzy else ""
+    alert_status = AlertStatus.userPrompt if fuzzy else AlertStatus.normal
+    alert_size = AlertSize.mid if fuzzy else AlertSize.small
+    audible_alert = AudibleAlert.prompt if fuzzy else AudibleAlert.none
+    return Alert(
+      "تم تحميل وحدة التحكم الجانبية NN",
+      alert_text_2,
+      alert_status, alert_size,
+      Priority.LOW, VisualAlert.none, audible_alert, 6.0)
 
-# *** debug alerts ***
+# *** تنبيهات التصحيح ***
 
 def out_of_space_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    full_perc = round(100. - sm['deviceState'].freeSpacePercent)
-    return NormalPermanentAlert("نفدت مساحة التخزين", f"المساحة ممتلئة بنسبة {full_perc}%")
+  full_perc = round(100. - sm['deviceState'].freeSpacePercent)
+  return NormalPermanentAlert("نفدت مساحة التخزين", f"{full_perc}% ممتلئة")
+
 
 def posenet_invalid_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    mdl = sm['modelV2'].velocity.x[0] if len(sm['modelV2'].velocity.x) else math.nan
-    err = CS.vEgo - mdl
-    msg = f"خطأ في السرعة: {err:.1f} م/ث"
-    return NoEntryAlert(msg, alert_text_1="سرعة Posenet غير صحيحة")
+  mdl = sm['modelV2'].velocity.x[0] if len(sm['modelV2'].velocity.x) else math.nan
+  err = CS.vEgo - mdl
+  msg = f"خطأ في السرعة: {err:.1f} م/ث"
+  return NoEntryAlert(msg, alert_text_1="سرعة Posenet غير صالحة")
+
 
 def process_not_running_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    not_running = [p.name for p in sm['managerState'].processes if not p.running and p.shouldBeRunning]
-    msg = ', '.join(not_running)
-    return NoEntryAlert(msg, alert_text_1="عملية غير قيد التشغيل")
+  not_running = [p.name for p in sm['managerState'].processes if not p.running and p.shouldBeRunning]
+  msg = ', '.join(not_running)
+  return NoEntryAlert(msg, alert_text_1="العملية لا تعمل")
+
 
 def comm_issue_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    bs = [s for s in sm.data.keys() if not sm.all_checks([s, ])]
-    msg = ', '.join(bs[:4])  # لا يمكن عرض الكثير في سطر واحد
-    return NoEntryAlert(msg, alert_text_1="مشكلة في الاتصال بين العمليات")
+  bs = [s for s in sm.data.keys() if not sm.all_checks([s, ])]
+  msg = ', '.join(bs[:4])  # لا يمكن وضع الكثير في سطر واحد
+  return NoEntryAlert(msg, alert_text_1="مشكلة في الاتصال بين العمليات")
+
 
 def camera_malfunction_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    all_cams = ('roadCameraState', 'driverCameraState', 'wideRoadCameraState')
-    bad_cams = [s.replace('State', '') for s in all_cams if s in sm.data.keys() and not sm.all_checks([s, ])]
-    return NormalPermanentAlert("عطل في الكاميرا", ', '.join(bad_cams))
+  all_cams = ('roadCameraState', 'driverCameraState', 'wideRoadCameraState')
+  bad_cams = [s.replace('State', '') for s in all_cams if s in sm.data.keys() and not sm.all_checks([s, ])]
+  return NormalPermanentAlert("عطل في الكاميرا", ', '.join(bad_cams))
 
 
 def calibration_invalid_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    rpy = sm['liveCalibration'].rpyCalib
-    yaw = math.degrees(rpy[2] if len(rpy) == 3 else math.nan)
-    pitch = math.degrees(rpy[1] if len(rpy) == 3 else math.nan)
-    angles = f"أعد تركيب الجهاز (الإمالة: {pitch:.1f}°, الانحراف: {yaw:.1f}°)"
-    return NormalPermanentAlert("المعايرة غير صحيحة", angles)
+  rpy = sm['liveCalibration'].rpyCalib
+  yaw = math.degrees(rpy[2] if len(rpy) == 3 else math.nan)
+  pitch = math.degrees(rpy[1] if len(rpy) == 3 else math.nan)
+  angles = f"أعد تركيب الجهاز (الزاوية: {pitch:.1f}°, الانحراف: {yaw:.1f}°)"
+  return NormalPermanentAlert("المعايرة غير صالحة", angles)
+
 
 def overheat_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    cpu = max(sm['deviceState'].cpuTempC, default=0.)
-    gpu = max(sm['deviceState'].gpuTempC, default=0.)
-    temp = max((cpu, gpu, sm['deviceState'].memoryTempC))
-    return NormalPermanentAlert("النظام محموم", f"{temp:.0f} °م")
+  cpu = max(sm['deviceState'].cpuTempC, default=0.)
+  gpu = max(sm['deviceState'].gpuTempC, default=0.)
+  temp = max((cpu, gpu, sm['deviceState'].memoryTempC))
+  return NormalPermanentAlert("النظام محموم", f"{temp:.0f} °م")
+
 
 def low_memory_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    return NormalPermanentAlert("ذاكرة منخفضة", f"تم استخدام {sm['deviceState'].memoryUsagePercent}%")
+  return NormalPermanentAlert("ذاكرة منخفضة", f"{sm['deviceState'].memoryUsagePercent}% مستخدمة")
+
 
 def high_cpu_usage_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    x = max(sm['deviceState'].cpuUsagePercent, default=0.)
-    return NormalPermanentAlert("استهلاك عالي للمعالج", f"تم استخدام {x}%")
+  x = max(sm['deviceState'].cpuUsagePercent, default=0.)
+  return NormalPermanentAlert("استخدام عالي لوحدة المعالجة المركزية", f"{x}% مستخدم")
+
 
 def modeld_lagging_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    return NormalPermanentAlert("تأخير في نموذج القيادة", f"تم فقد {sm['modelV2'].frameDropPerc:.1f}% من الإطارات")
+  return NormalPermanentAlert("تأخر نموذج القيادة", f"{sm['modelV2'].frameDropPerc:.1f}% من الإطارات مفقودة")
 
 def wrong_car_mode_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    text = "فعّل نظام تثبيت السرعة التكيفي لتفعيل النظام"
-    if CP.carName == "honda":
-        text = "فعّل المفتاح الرئيسي لتفعيل النظام"
-    return NoEntryAlert(text)
+  text = "قم بتفعيل نظام التحكم التكيفي لتفعيل القائد الآلي"
+  if CP.carName == "honda":
+    text = "قم بتفعيل المفتاح الرئيسي لتفعيل القائد الآلي"
+  return NoEntryAlert(text)
+
 
 def joystick_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    axes = sm['testJoystick'].axes
-    gb, steer = list(axes)[:2] if len(axes) else (0., 0.)
-    vals = f"الوقود: {round(gb * 100.)}%, التوجيه: {round(steer * 100.)}%"
-    return NormalPermanentAlert("وضع عصا التحكم", vals)
+  axes = sm['testJoystick'].axes
+  gb, steer = list(axes)[:2] if len(axes) else (0., 0.)
+  vals = f"الغاز: {round(gb * 100.)}%, التوجيه: {round(steer * 100.)}%"
+  return NormalPermanentAlert("وضع عصا التحكم", vals)
 
 def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-    speedLimit = sm['longitudinalPlanSP'].speedLimit
-    speed = round(speedLimit * (CV.MS_TO_KPH if metric else CV.MS_TO_MPH))
-    message = f'التعديل إلى حد السرعة {speed} {"كم/ساعة" if metric else "ميل/ساعة"}'
-    return Alert(
-        message,
-        "",
-        AlertStatus.normal, AlertSize.small,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, 4.)
-
+  speedLimit = sm['longitudinalPlanSP'].speedLimit
+  speed = round(speedLimit * (CV.MS_TO_KPH if metric else CV.MS_TO_MPH))
+  message = f'تعديل السرعة إلى {speed} {"كم/س" if metric else "ميل/س"}'
+  return Alert(
+    message,
+    "",
+    AlertStatus.normal, AlertSize.small,
+    Priority.LOW, VisualAlert.none, AudibleAlert.none, 4.)
 
 
 EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
-    # ********** أحداث بدون تنبيهات **********
+  # ********** أحداث بدون تنبيهات **********
 
-    EventName.stockFcw: {},
-    EventName.actuatorsApiUnavailable: {},
+  EventName.stockFcw: {},
+  EventName.actuatorsApiUnavailable: {},
 
-    # ********** أحداث تحتوي فقط على تنبيهات تُعرض في جميع الحالات **********
+  # ********** أحداث تحتوي فقط على تنبيهات تظهر في جميع الحالات **********
 
-    EventName.joystickDebug: {
-        ET.WARNING: joystick_alert,
-        ET.PERMANENT: NormalPermanentAlert("وضع عصا التحكم"),
-    },
+  EventName.joystickDebug: {
+    ET.WARNING: joystick_alert,
+    ET.PERMANENT: NormalPermanentAlert("وضع عصا التحكم"),
+  },
 
-    EventName.controlsInitializing: {
-        ET.NO_ENTRY: NoEntryAlert("النظام قيد التهيئة"),
-    },
+  EventName.controlsInitializing: {
+    ET.NO_ENTRY: NoEntryAlert("النظام قيد التهيئة"),
+  },
 
-    EventName.startup: {
-        ET.PERMANENT: StartupAlert("كن مستعداً للتدخل في أي وقت")
-    },
+  EventName.startup: {
+    ET.PERMANENT: StartupAlert("كن مستعدًا لتولي التحكم في أي وقت")
+  },
 
-    EventName.startupMaster: {
-        ET.PERMANENT: startup_master_alert,
-    },
+  EventName.startupMaster: {
+    ET.PERMANENT: startup_master_alert,
+  },
 
-    # السيارة معروفة ولكن تم تمييزها كـ Dashcam فقط
-    EventName.startupNoControl: {
-        ET.PERMANENT: StartupAlert("وضع Dashcam"),
-        ET.NO_ENTRY: NoEntryAlert("وضع Dashcam"),
-    },
+  # السيارة معروفة، ولكن تم تعيينها كـ dashcam فقط
+  EventName.startupNoControl: {
+    ET.PERMANENT: StartupAlert("وضع Dashcam"),
+    ET.NO_ENTRY: NoEntryAlert("وضع Dashcam"),
+  },
 
-    # السيارة غير معروفة
-    EventName.startupNoCar: {
-        ET.PERMANENT: StartupAlert("وضع Dashcam لسيارة غير مدعومة"),
-    },
+  # السيارة غير معروفة
+  EventName.startupNoCar: {
+    ET.PERMANENT: StartupAlert("وضع Dashcam للسيارات غير المدعومة"),
+  },
 
-    EventName.startupNoFw: {
-        ET.PERMANENT: StartupAlert("السيارة غير معروفة",
-                                   "تحقق من توصيلات طاقة nmk.sa",
-                                   alert_status=AlertStatus.userPrompt),
-    },
+  EventName.startupNoFw: {
+    ET.PERMANENT: StartupAlert("السيارة غير معروفة",
+                               "تحقق من توصيلات الطاقة",
+                               alert_status=AlertStatus.userPrompt),
+  },
 
-    EventName.dashcamMode: {
-        ET.PERMANENT: NormalPermanentAlert("وضع Dashcam",
-                                           priority=Priority.LOWEST),
-    },
+  EventName.dashcamMode: {
+    ET.PERMANENT: NormalPermanentAlert("وضع Dashcam",
+                                       priority=Priority.LOWEST),
+  },
 
-    EventName.invalidLkasSetting: {
-        ET.PERMANENT: NormalPermanentAlert("نظام LKAS الافتراضي مفعّل",
-                                           "أوقف تشغيل نظام LKAS الافتراضي لتفعيل القائد الآلي"),
-    },
+  EventName.invalidLkasSetting: {
+    ET.PERMANENT: NormalPermanentAlert("نظام LKAS الافتراضي مفعّل",
+                                       "أوقف تشغيل نظام LKAS الافتراضي لتفعيل القائد الآلي"),
+  },
 
-    EventName.cruiseMismatch: {
-        #ET.PERMANENT: ImmediateDisableAlert("فشل القائد الآلي في إلغاء تثبيت السرعة"),
-    },
+  EventName.cruiseMismatch: {
+    #ET.PERMANENT: ImmediateDisableAlert("فشل القائد الآلي في إلغاء تثبيت السرعة"),
+  },
 
-    # القائد الآلي لا يتعرف على السيارة. يتم تحويل القائد الآلي إلى وضع القراءة فقط.
-    # يمكن حل هذه المشكلة بإضافة بصمة السيارة.
-    # انظر https://github.com/NMK-Ai/openpilot/wiki/Fingerprinting لمزيد من المعلومات
-    EventName.carUnrecognized: {
-        ET.PERMANENT: NormalPermanentAlert("وضع Dashcam",
-                                           '⚙️ -> "المركبة" لاختيار سيارتك',
-                                           priority=Priority.LOWEST),
-    },
-},
+  # القائد الآلي لا يتعرف على السيارة. هذا يحول القائد الآلي إلى وضع القراءة فقط.
+  # يمكن حل هذه المشكلة بإضافة بصمتك.
+  # راجع https://github.com/commaai/openpilot/wiki/Fingerprinting لمزيد من المعلومات
+  EventName.carUnrecognized: {
+    ET.PERMANENT: NormalPermanentAlert("وضع Dashcam",
+                                       '⚙️ -> "المركبة" لاختيار سيارتك',
+                                       priority=Priority.LOWEST),
+  },
 
 EventName.stockAeb: {
     ET.PERMANENT: Alert(
-        "استخدم المكابح!",
-        "نظام الكبح الطارئ الافتراضي (AEB): خطر التصادم",
-        AlertStatus.critical, AlertSize.full,
-        Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.none, 2.0
-    ),
-    ET.NO_ENTRY: NoEntryAlert("نظام الكبح الطارئ الافتراضي (AEB): خطر التصادم")
-},
+      "استخدم المكابح!",
+      "نظام الكبح الطارئ الافتراضي (AEB): خطر التصادم",
+      AlertStatus.critical, AlertSize.full,
+      Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.none, 2.),
+    ET.NO_ENTRY: NoEntryAlert("نظام الكبح الطارئ الافتراضي (AEB): خطر التصادم"),
+  },
 
-EventName.fcw: {
+  EventName.fcw: {
     ET.PERMANENT: Alert(
-        "استخدم المكابح!",
-        "خطر التصادم",
-        AlertStatus.critical, AlertSize.full,
-        Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.warningSoft, 2.0
-    ),
-},
+      "استخدم المكابح!",
+      "خطر التصادم",
+      AlertStatus.critical, AlertSize.full,
+      Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.warningSoft, 2.),
+  },
 
-EventName.ldw: {
+  EventName.ldw: {
     ET.PERMANENT: Alert(
-        "تم الكشف عن انحراف عن المسار",
-        "",
-        AlertStatus.userPrompt, AlertSize.small,
-        Priority.LOW, VisualAlert.ldw, AudibleAlert.prompt, 3.0
-    ),
-},
+      "تم الكشف عن انحراف عن المسار",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.LOW, VisualAlert.ldw, AudibleAlert.prompt, 3.),
+  },
 
-# ********** أحداث تحتوي فقط على تنبيهات تظهر أثناء التفعيل **********
+  # ********** أحداث تحتوي فقط على تنبيهات تظهر أثناء التفعيل **********
 
-EventName.steerTempUnavailableSilent: {
+  EventName.steerTempUnavailableSilent: {
     ET.WARNING: Alert(
-        "التوجيه غير متاح مؤقتاً",
-        "",
-        AlertStatus.userPrompt, AlertSize.small,
-        Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, 1.8),
-},
+      "التوجيه غير متاح مؤقتاً",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.prompt, 1.8),
+  },
 
-EventName.preDriverDistracted: {
+  EventName.preDriverDistracted: {
     ET.PERMANENT: Alert(
-        "انتبه للطريق",
-        "",
-        AlertStatus.normal, AlertSize.small,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
-},
+      "انتبه للطريق",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
+  },
 
-EventName.promptDriverDistracted: {
+  EventName.promptDriverDistracted: {
     ET.PERMANENT: Alert(
-        "انتبه للطريق",
-        "السائق مشتت",
-        AlertStatus.userPrompt, AlertSize.mid,
-        Priority.MID, VisualAlert.steerRequired, AudibleAlert.promptDistracted, .1),
-},
+      "انتبه للطريق",
+      "السائق مشتت",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.MID, VisualAlert.steerRequired, AudibleAlert.promptDistracted, .1),
+  },
 
-EventName.driverDistracted: {
+  EventName.driverDistracted: {
     ET.PERMANENT: Alert(
-        "قم بفصل النظام فوراً",
-        "السائق مشتت",
-        AlertStatus.critical, AlertSize.full,
-        Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.warningImmediate, .1),
-},
+      "تعطيل القائد الآلي فوراً",
+      "السائق مشتت",
+      AlertStatus.critical, AlertSize.full,
+      Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.warningImmediate, .1),
+  },
 
-EventName.preDriverUnresponsive: {
+  EventName.preDriverUnresponsive: {
     ET.PERMANENT: Alert(
-        "المس عجلة القيادة: لم يتم الكشف عن وجه",
-        "",
-        AlertStatus.normal, AlertSize.small,
-        Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, .1, alert_rate=0.75),
-},
+      "المس عجلة القيادة: لم يتم الكشف عن وجه",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, .1, alert_rate=0.75),
+  },
 
-EventName.promptDriverUnresponsive: {
+  EventName.promptDriverUnresponsive: {
     ET.PERMANENT: Alert(
-        "المس عجلة القيادة",
-        "السائق غير مستجيب",
-        AlertStatus.userPrompt, AlertSize.mid,
-        Priority.MID, VisualAlert.steerRequired, AudibleAlert.promptDistracted, .1),
-},
+      "المس عجلة القيادة",
+      "السائق غير مستجيب",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.MID, VisualAlert.steerRequired, AudibleAlert.promptDistracted, .1),
+  },
 
-EventName.driverUnresponsive: {
+  EventName.driverUnresponsive: {
     ET.PERMANENT: Alert(
-        "افصل النظام فوراً",
-        "السائق غير مستجيب",
-        AlertStatus.critical, AlertSize.full,
-        Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.warningImmediate, .1),
-},
+      "تعطيل القائد الآلي فوراً",
+      "السائق غير مستجيب",
+      AlertStatus.critical, AlertSize.full,
+      Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.warningImmediate, .1),
+  },
 
-EventName.preKeepHandsOnWheel: {
+  EventName.preKeepHandsOnWheel: {
     ET.WARNING: Alert(
-        "لم يتم الكشف عن يدي السائق على عجلة القيادة",
-        "",
-        AlertStatus.userPrompt, AlertSize.small,
-        Priority.MID, VisualAlert.steerRequired, AudibleAlert.none, .1, alert_rate=0.75),
-},
+      "لم يتم الكشف عن أيدي على عجلة القيادة",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.MID, VisualAlert.steerRequired, AudibleAlert.none, .1, alert_rate=0.75),
+  },
 
-EventName.promptKeepHandsOnWheel: {
+  EventName.promptKeepHandsOnWheel: {
     ET.WARNING: Alert(
-        "أبعدت يديك عن عجلة القيادة",
-        "ضع يديك على عجلة القيادة",
-        AlertStatus.critical, AlertSize.mid,
-        Priority.MID, VisualAlert.steerRequired, AudibleAlert.promptDistracted, .1),
-},
+      "الأيدي غير موجودة على عجلة القيادة",
+      "ضع يديك على عجلة القيادة",
+      AlertStatus.critical, AlertSize.mid,
+      Priority.MID, VisualAlert.steerRequired, AudibleAlert.promptDistracted, .1),
+  },
 
-EventName.keepHandsOnWheel: {
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("السائق أبعد يديه عن عجلة القيادة"),
-},
+  EventName.keepHandsOnWheel: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("السائق لم يضع يديه على عجلة القيادة"),
+  },
 
-EventName.manualRestart: {
+  EventName.manualRestart: {
     ET.WARNING: Alert(
-        "استلم القيادة",
-        "استأنف القيادة يدوياً",
-        AlertStatus.userPrompt, AlertSize.mid,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, .2),
-},
+      "تولي التحكم",
+      "استأنف القيادة يدوياً",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .2),
+  },
 
-EventName.resumeRequired: {
+  EventName.resumeRequired: {
     ET.WARNING: Alert(
-        "اضغط على زر استئناف للخروج من التوقف التام",
-        "",
-        AlertStatus.userPrompt, AlertSize.small,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, .2),
-},
+      "اضغط على استئناف للخروج من التوقف التام",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .2),
+  },
 
-EventName.belowSteerSpeed: {
+  EventName.belowSteerSpeed: {
     ET.WARNING: below_steer_speed_alert,
-},
+  },
 
-EventName.preLaneChangeLeft: {
+  EventName.preLaneChangeLeft: {
     ET.WARNING: Alert(
-        "وجه السيارة لليسار لبدء تغيير المسار عند الأمان",
-        "",
-        AlertStatus.normal, AlertSize.small,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, .1, alert_rate=0.75),
-},
+      "وجه السيارة إلى اليسار لبدء تغيير المسار بمجرد أن يكون آمناً",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1, alert_rate=0.75),
+  },
 
-EventName.preLaneChangeRight: {
+  EventName.preLaneChangeRight: {
     ET.WARNING: Alert(
-        "وجه السيارة لليمين لبدء تغيير المسار عند الأمان",
-        "",
-        AlertStatus.normal, AlertSize.small,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, .1, alert_rate=0.75),
-},
+      "وجه السيارة إلى اليمين لبدء تغيير المسار بمجرد أن يكون آمناً",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1, alert_rate=0.75),
+  },
 
-EventName.laneChangeBlocked: {
+  EventName.laneChangeBlocked: {
     ET.WARNING: Alert(
-        "تم اكتشاف سيارة في النقطة العمياء",
-        "",
-        AlertStatus.userPrompt, AlertSize.small,
-        Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .1),
-},
+      "تم الكشف عن سيارة في النقطة العمياء",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .1),
+  },
 
-EventName.laneChangeRoadEdge: {
+  EventName.laneChangeRoadEdge: {
     ET.WARNING: Alert(
-        "تغيير المسار غير متاح: حافة الطريق",
-        "",
-        AlertStatus.userPrompt, AlertSize.small,
-        Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .1),
-},
+      "تغيير المسار غير متاح: حافة الطريق",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, .1),
+  },
 
-EventName.laneChange: {
+  EventName.laneChange: {
     ET.WARNING: Alert(
-        "جاري تغيير المسار",
-        "",
-        AlertStatus.normal, AlertSize.small,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
-},
+      "تغيير المسار",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
+  },
 
-EventName.manualSteeringRequired: {
+  EventName.manualSteeringRequired: {
     ET.WARNING: Alert(
-        "نظام التمركز الآلي غير مفعل",
-        "التوجيه اليدوي مطلوب",
-        AlertStatus.normal, AlertSize.mid,
-        Priority.LOW, VisualAlert.none, AudibleAlert.disengage, 1.),
-},
+      "توجيه المسار التلقائي متوقف",
+      "التوجيه اليدوي مطلوب",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.disengage, 1.),
+  },
 
-EventName.manualLongitudinalRequired: {
+  EventName.manualLongitudinalRequired: {
     ET.WARNING: Alert(
-        "نظام تثبيت السرعة الذكي غير مفعل",
-        "تسارع/فرملة يدوية مطلوبة",
-        AlertStatus.normal, AlertSize.mid,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
-},
+      "نظام التحكم الذكي/التكيفي في السرعة متوقف",
+      "التحكم اليدوي في الغاز/الفرامل مطلوب",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, 1.),
+  },
 
-EventName.cruiseEngageBlocked: {
+  EventName.cruiseEngageBlocked: {
     ET.WARNING: Alert(
-        "القائد الآلي غير متاح",
-        "تم الضغط على دواسة أثناء تفعيل السرعة",
-        AlertStatus.normal, AlertSize.mid,
-        Priority.LOW, VisualAlert.brakePressed, AudibleAlert.refuse, 3.),
-},
+      "القائد الآلي غير متاح",
+      "تم الضغط على الدواسة أثناء تفعيل التحكم في السرعة",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOW, VisualAlert.brakePressed, AudibleAlert.refuse, 3.),
+  },
 
 EventName.steerSaturated: {
     ET.WARNING: Alert(
-        "استلم القيادة",
-        "الانعطاف يتجاوز حد التوجيه",
-        AlertStatus.userPrompt, AlertSize.mid,
-        Priority.LOW, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 2.),
-},
+      "تولي التحكم",
+      "الانعطاف يتجاوز حد التوجيه",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 2.),
+  },
 
-EventName.fanMalfunction: {
-    ET.PERMANENT: NormalPermanentAlert("عطل في المروحة", "مشكلة محتملة في العتاد"),
-},
+  # Thrown when the fan is driven at >50% but is not rotating
+  EventName.fanMalfunction: {
+    ET.PERMANENT: NormalPermanentAlert("عطل في المروحة", "مشكلة في الأجهزة على الأرجح"),
+  },
 
-EventName.cameraMalfunction: {
+  # Camera is not outputting frames
+  EventName.cameraMalfunction: {
     ET.PERMANENT: camera_malfunction_alert,
     ET.SOFT_DISABLE: soft_disable_alert("عطل في الكاميرا"),
-    ET.NO_ENTRY: NoEntryAlert("عطل في الكاميرا: أعد تشغيل الجهاز"),
-},
+    ET.NO_ENTRY: NoEntryAlert("عطل في الكاميرا: أعد تشغيل جهازك"),
+  },
+  # Camera framerate too low
+  EventName.cameraFrameRate: {
+    ET.PERMANENT: NormalPermanentAlert("معدل إطارات الكاميرا منخفض", "أعد تشغيل جهازك"),
+    ET.SOFT_DISABLE: soft_disable_alert("معدل إطارات الكاميرا منخفض"),
+    ET.NO_ENTRY: NoEntryAlert("معدل إطارات الكاميرا منخفض: أعد تشغيل جهازك"),
+  },
 
-EventName.cameraFrameRate: {
-    ET.PERMANENT: NormalPermanentAlert("معدل الإطارات في الكاميرا منخفض", "أعد تشغيل الجهاز"),
-    ET.SOFT_DISABLE: soft_disable_alert("معدل الإطارات في الكاميرا منخفض"),
-    ET.NO_ENTRY: NoEntryAlert("معدل الإطارات في الكاميرا منخفض: أعد تشغيل الجهاز"),
-},
+  # Unused
 
-EventName.locationdTemporaryError: {
+  EventName.locationdTemporaryError: {
     ET.NO_ENTRY: NoEntryAlert("خطأ مؤقت في locationd"),
     ET.SOFT_DISABLE: soft_disable_alert("خطأ مؤقت في locationd"),
-},
+  },
 
-EventName.locationdPermanentError: {
+  EventName.locationdPermanentError: {
     ET.NO_ENTRY: NoEntryAlert("خطأ دائم في locationd"),
     ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("خطأ دائم في locationd"),
     ET.PERMANENT: NormalPermanentAlert("خطأ دائم في locationd"),
-},
+  },
 
-EventName.paramsdTemporaryError: {
+  # openpilot tries to learn certain parameters about your car by observing
+  # how the car behaves to steering inputs from both human and openpilot driving.
+  # This includes:
+  # - steer ratio: gear ratio of the steering rack. Steering angle divided by tire angle
+  # - tire stiffness: how much grip your tires have
+  # - angle offset: most steering angle sensors are offset and measure a non zero angle when driving straight
+  # This alert is thrown when any of these values exceed a sanity check. This can be caused by
+  # bad alignment or bad sensor data. If this happens consistently consider creating an issue on GitHub
+  EventName.paramsdTemporaryError: {
     ET.NO_ENTRY: NoEntryAlert("خطأ مؤقت في paramsd"),
     ET.SOFT_DISABLE: soft_disable_alert("خطأ مؤقت في paramsd"),
-},
+  },
 
-EventName.paramsdPermanentError: {
+  EventName.paramsdPermanentError: {
     ET.NO_ENTRY: NoEntryAlert("خطأ دائم في paramsd"),
     ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("خطأ دائم في paramsd"),
     ET.PERMANENT: NormalPermanentAlert("خطأ دائم في paramsd"),
-},
+  },
 
-EventName.speedLimitActive: {
+  EventName.speedLimitActive: {
     ET.WARNING: Alert(
-        "تم ضبط السرعة لتتوافق مع الحد المعلن",
-        "",
-        AlertStatus.normal, AlertSize.small,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, 3.),
-},
+      "تم تغيير السرعة المحددة لتتوافق مع حد السرعة المعلن",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, 3.),
+  },
 
-EventName.speedLimitValueChange: {
+  EventName.speedLimitValueChange: {
     ET.WARNING: speed_limit_adjust_alert,
-},
+  },
 
-EventName.e2eLongStart: {
+  EventName.e2eLongStart: {
     ET.PERMANENT: Alert(
-        "",
-        "",
-        AlertStatus.normal, AlertSize.none,
-        Priority.MID, VisualAlert.none, AudibleAlert.promptStarting, 1.5),
-},
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.MID, VisualAlert.none, AudibleAlert.promptStarting, 1.5),
+  },
 
-EventName.speedLimitPreActive: {
+  EventName.speedLimitPreActive: {
     ET.WARNING: Alert(
-        "",
-        "",
-        AlertStatus.normal, AlertSize.none,
-        Priority.MID, VisualAlert.none, AudibleAlert.promptSingleLow, .45),
-},
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.MID, VisualAlert.none, AudibleAlert.promptSingleLow, .45),
+  },
 
-EventName.speedLimitConfirmed: {
+  EventName.speedLimitConfirmed: {
     ET.WARNING: Alert(
-        "",
-        "",
-        AlertStatus.normal, AlertSize.none,
-        Priority.MID, VisualAlert.none, AudibleAlert.promptSingleHigh, .45),
-},
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.MID, VisualAlert.none, AudibleAlert.promptSingleHigh, .45),
+  },
 
-EventName.pcmEnable: {
+  # ********** أحداث تؤثر على انتقال حالات التحكم **********
+
+  EventName.pcmEnable: {
     ET.ENABLE: EngagementAlert(AudibleAlert.engage),
-},
+  },
 
-EventName.buttonEnable: {
+  EventName.buttonEnable: {
     ET.ENABLE: EngagementAlert(AudibleAlert.engage),
-},
+  },
 
-EventName.silentButtonEnable: {
+  EventName.silentButtonEnable: {
     ET.ENABLE: Alert(
-        "",
-        "",
-        AlertStatus.normal, AlertSize.none,
-        Priority.MID, VisualAlert.none, AudibleAlert.none, .2, 0., 0.),
-},
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.MID, VisualAlert.none, AudibleAlert.none, .2, 0., 0.),
+  },
 
-EventName.pcmDisable: {
+  EventName.pcmDisable: {
     ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
-},
+  },
 
-EventName.buttonCancel: {
+  EventName.buttonCancel: {
     ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
-    ET.NO_ENTRY: NoEntryAlert("تم الضغط على زر الإلغاء"),
-},
+    ET.NO_ENTRY: NoEntryAlert("تم الضغط على إلغاء"),
+  },
 
-EventName.brakeHold: {
+  EventName.brakeHold: {
     ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
-    ET.NO_ENTRY: NoEntryAlert("نظام الفرامل التوقفية نشط"),
-},
+    ET.NO_ENTRY: NoEntryAlert("تفعيل الفرامل"),
+  },
 
-EventName.silentBrakeHold: {
+  EventName.silentBrakeHold: {
     ET.USER_DISABLE: Alert(
-        "",
-        "",
-        AlertStatus.normal, AlertSize.none,
-        Priority.MID, VisualAlert.none, AudibleAlert.none, .2),
-    ET.NO_ENTRY: NoEntryAlert("نظام الفرامل التوقفية نشط"),
-},
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.MID, VisualAlert.none, AudibleAlert.none, .2, 0., 0.),
+    ET.NO_ENTRY: NoEntryAlert("تفعيل الفرامل"),
+  },
 
-EventName.parkBrake: {
+  EventName.parkBrake: {
     ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
-    ET.NO_ENTRY: NoEntryAlert("تم تفعيل فرامل الانتظار"),
-},
+    ET.NO_ENTRY: NoEntryAlert("تفعيل فرامل الانتظار"),
+  },
 
-EventName.pedalPressed: {
+  EventName.pedalPressed: {
     ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
     ET.NO_ENTRY: NoEntryAlert("تم الضغط على الدواسة",
                               visual_alert=VisualAlert.brakePressed),
-},
+  },
 
-EventName.silentPedalPressed: {
+  EventName.silentPedalPressed: {
     ET.USER_DISABLE: Alert(
-        "",
-        "",
-        AlertStatus.normal, AlertSize.none,
-        Priority.MID, VisualAlert.none, AudibleAlert.none, .2),
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.MID, VisualAlert.none, AudibleAlert.none, .2),
     ET.NO_ENTRY: NoEntryAlert("تم الضغط على الدواسة أثناء المحاولة",
                               visual_alert=VisualAlert.brakePressed),
-},
+  },
 
-EventName.preEnableStandstill: {
+  EventName.preEnableStandstill: {
     ET.PRE_ENABLE: Alert(
-        "حرر الفرامل للتفعيل",
-        "",
-        AlertStatus.normal, AlertSize.small,
-        Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .1, creation_delay=1.),
-},
+      "حرر الفرامل للتفعيل",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .1, creation_delay=1.),
+  },
 
 EventName.gasPressedOverride: {
     ET.OVERRIDE_LONGITUDINAL: Alert(
-        "",
-        "",
-        AlertStatus.normal, AlertSize.none,
-        Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .1),
-},
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .1),
+  },
 
-EventName.steerOverride: {
+  EventName.steerOverride: {
     ET.OVERRIDE_LATERAL: Alert(
-        "",
-        "",
-        AlertStatus.normal, AlertSize.none,
-        Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .1),
-},
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .1),
+  },
 
-EventName.wrongCarMode: {
+  EventName.wrongCarMode: {
     ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
     ET.NO_ENTRY: wrong_car_mode_alert,
-},
+  },
 
-EventName.resumeBlocked: {
-    ET.NO_ENTRY: NoEntryAlert("اضغط على زر 'تعيين' للتفعيل"),
-},
+  EventName.resumeBlocked: {
+    ET.NO_ENTRY: NoEntryAlert("اضغط على تعيين للتفعيل"),
+  },
 
-EventName.wrongCruiseMode: {
+  EventName.wrongCruiseMode: {
     ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
-    ET.NO_ENTRY: NoEntryAlert("تم تعطيل نظام تثبيت السرعة التكيفي"),
-},
+    ET.NO_ENTRY: NoEntryAlert("نظام التحكم التكيفي معطل"),
+  },
 
-EventName.steerTempUnavailable: {
+  EventName.steerTempUnavailable: {
     ET.SOFT_DISABLE: soft_disable_alert("التوجيه غير متاح مؤقتاً"),
     ET.NO_ENTRY: NoEntryAlert("التوجيه غير متاح مؤقتاً"),
-},
+  },
 
-EventName.steerTimeLimit: {
-    ET.SOFT_DISABLE: soft_disable_alert("حد وقت التوجيه للسيارة"),
-    ET.NO_ENTRY: NoEntryAlert("حد وقت التوجيه للسيارة"),
-},
+  EventName.steerTimeLimit: {
+    ET.SOFT_DISABLE: soft_disable_alert("حد وقت التوجيه للمركبة"),
+    ET.NO_ENTRY: NoEntryAlert("حد وقت التوجيه للمركبة"),
+  },
 
-EventName.outOfSpace: {
+  EventName.outOfSpace: {
     ET.PERMANENT: out_of_space_alert,
     ET.NO_ENTRY: NoEntryAlert("نفدت مساحة التخزين"),
-},
+  },
 
-EventName.belowEngageSpeed: {
+  EventName.belowEngageSpeed: {
     ET.NO_ENTRY: below_engage_speed_alert,
-},
+  },
 
-EventName.sensorDataInvalid: {
+  EventName.sensorDataInvalid: {
     ET.PERMANENT: Alert(
-        "بيانات المستشعر غير صحيحة",
-        "مشكلة محتملة في العتاد",
-        AlertStatus.normal, AlertSize.mid,
-        Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2, creation_delay=1.),
-    ET.NO_ENTRY: NoEntryAlert("بيانات المستشعر غير صحيحة"),
-    ET.SOFT_DISABLE: soft_disable_alert("بيانات المستشعر غير صحيحة"),
-},
+      "بيانات المستشعر غير صالحة",
+      "مشكلة محتملة في الأجهزة",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2, creation_delay=1.),
+    ET.NO_ENTRY: NoEntryAlert("بيانات المستشعر غير صالحة"),
+    ET.SOFT_DISABLE: soft_disable_alert("بيانات المستشعر غير صالحة"),
+  },
 
-EventName.noGps: {
+  EventName.noGps: {
     ET.PERMANENT: Alert(
-        "استقبال GPS ضعيف",
-        "تأكد من أن الجهاز لديه رؤية واضحة للسماء",
-        AlertStatus.normal, AlertSize.mid,
-        Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2, creation_delay=600.),
-},
+      "استقبال GPS ضعيف",
+      "تأكد من أن الجهاز لديه رؤية واضحة للسماء",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2, creation_delay=600.)
+  },
 
-EventName.soundsUnavailable: {
-    ET.PERMANENT: NormalPermanentAlert("لم يتم العثور على مكبر الصوت", "أعد تشغيل الجهاز"),
+  EventName.soundsUnavailable: {
+    ET.PERMANENT: NormalPermanentAlert("لم يتم العثور على مكبر الصوت", "أعد تشغيل جهازك"),
     ET.NO_ENTRY: NoEntryAlert("لم يتم العثور على مكبر الصوت"),
-},
+  },
 
-EventName.tooDistracted: {
-    ET.NO_ENTRY: NoEntryAlert("مستوى التشتيت مرتفع جداً"),
-},
+  EventName.tooDistracted: {
+    ET.NO_ENTRY: NoEntryAlert("مستوى التشتت مرتفع جداً"),
+  },
 
-EventName.overheat: {
+  EventName.overheat: {
     ET.PERMANENT: overheat_alert,
     ET.SOFT_DISABLE: soft_disable_alert("النظام محموم"),
     ET.NO_ENTRY: NoEntryAlert("النظام محموم"),
-},
+  },
 
-EventName.wrongGear: {
-    ET.SOFT_DISABLE: user_soft_disable_alert("وضع ناقل الحركة ليس على D"),
-    ET.NO_ENTRY: NoEntryAlert("وضع ناقل الحركة ليس على D"),
-},
+  EventName.wrongGear: {
+    ET.SOFT_DISABLE: user_soft_disable_alert("الترس ليس في الوضع D"),
+    ET.NO_ENTRY: NoEntryAlert("الترس ليس في الوضع D"),
+  },
 
-EventName.silentWrongGear: {
+  EventName.silentWrongGear: {
     ET.SOFT_DISABLE: Alert(
-        "وضع ناقل الحركة ليس على D",
-        "القائد الآلي غير متاح",
-        AlertStatus.normal, AlertSize.mid,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, 0., 2., 3.),
+      "الترس ليس في الوضع D",
+      "القائد الآلي غير متاح",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, 0., 2., 3.),
     ET.NO_ENTRY: Alert(
-        "وضع ناقل الحركة ليس على D",
-        "القائد الآلي غير متاح",
-        AlertStatus.normal, AlertSize.mid,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, 0., 2., 3.),
-},
+      "الترس ليس في الوضع D",
+      "القائد الآلي غير متاح",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, 0., 2., 3.),
+  },
 
-EventName.calibrationInvalid: {
+  # This alert is thrown when the calibration angles are outside of the acceptable range.
+  # For example if the device is pointed too much to the left or the right.
+  # Usually this can only be solved by removing the mount from the windshield completely,
+  # and attaching while making sure the device is pointed straight forward and is level.
+  # See https://comma.ai/setup for more information
+  EventName.calibrationInvalid: {
     ET.PERMANENT: calibration_invalid_alert,
-    ET.SOFT_DISABLE: soft_disable_alert("المعايرة غير صحيحة: أعد تركيب الجهاز وأعد المعايرة"),
-    ET.NO_ENTRY: NoEntryAlert("المعايرة غير صحيحة: أعد تركيب الجهاز وأعد المعايرة"),
-},
+    ET.SOFT_DISABLE: soft_disable_alert("المعايرة غير صالحة: أعد تركيب الجهاز وأعد المعايرة"),
+    ET.NO_ENTRY: NoEntryAlert("المعايرة غير صالحة: أعد تركيب الجهاز وأعد المعايرة"),
+  },
 
-EventName.calibrationIncomplete: {
+  EventName.calibrationIncomplete: {
     ET.PERMANENT: calibration_incomplete_alert,
     ET.SOFT_DISABLE: soft_disable_alert("المعايرة غير مكتملة"),
     ET.NO_ENTRY: NoEntryAlert("المعايرة جارية"),
-},
+  },
 
-EventName.calibrationRecalibrating: {
+  EventName.calibrationRecalibrating: {
     ET.PERMANENT: calibration_incomplete_alert,
-    ET.SOFT_DISABLE: soft_disable_alert("تم اكتشاف إعادة تركيب الجهاز: جارٍ إعادة المعايرة"),
-    ET.NO_ENTRY: NoEntryAlert("تم اكتشاف إعادة تركيب: جارٍ إعادة المعايرة"),
-},
+    ET.SOFT_DISABLE: soft_disable_alert("تم اكتشاف إعادة تركيب الجهاز: إعادة المعايرة"),
+    ET.NO_ENTRY: NoEntryAlert("تم اكتشاف إعادة تركيب الجهاز: إعادة المعايرة"),
+  },
 
-EventName.doorOpen: {
+  EventName.doorOpen: {
     ET.SOFT_DISABLE: user_soft_disable_alert("الباب مفتوح"),
     ET.NO_ENTRY: NoEntryAlert("الباب مفتوح"),
-},
+  },
 
-EventName.seatbeltNotLatched: {
+  EventName.seatbeltNotLatched: {
     ET.SOFT_DISABLE: user_soft_disable_alert("حزام الأمان غير مربوط"),
     ET.NO_ENTRY: NoEntryAlert("حزام الأمان غير مربوط"),
-},
+  },
 
-EventName.espDisabled: {
-    ET.SOFT_DISABLE: soft_disable_alert("نظام الثبات الإلكتروني معطل"),
-    ET.NO_ENTRY: NoEntryAlert("نظام الثبات الإلكتروني معطل"),
-},
+  EventName.espDisabled: {
+    ET.SOFT_DISABLE: soft_disable_alert("نظام التحكم الإلكتروني بالثبات معطل"),
+    ET.NO_ENTRY: NoEntryAlert("نظام التحكم الإلكتروني بالثبات معطل"),
+  },
 
-EventName.lowBattery: {
+  EventName.lowBattery: {
     ET.SOFT_DISABLE: soft_disable_alert("البطارية منخفضة"),
     ET.NO_ENTRY: NoEntryAlert("البطارية منخفضة"),
-},
+  },
 
-EventName.commIssue: {
+  # Different openpilot services communicate between each other at a certain
+  # interval. If communication does not follow the regular schedule this alert
+  # is thrown. This can mean a service crashed, did not broadcast a message for
+  # ten times the regular interval, or the average interval is more than 10% too high.
+  EventName.commIssue: {
     ET.SOFT_DISABLE: soft_disable_alert("مشكلة في الاتصال بين العمليات"),
     ET.NO_ENTRY: comm_issue_alert,
-},
+  },
+  EventName.commIssueAvgFreq: {
+    ET.SOFT_DISABLE: soft_disable_alert("معدل الاتصال بين العمليات منخفض"),
+    ET.NO_ENTRY: NoEntryAlert("معدل الاتصال بين العمليات منخفض"),
+  },
 
-EventName.controlsdLagging: {
-    ET.SOFT_DISABLE: soft_disable_alert("تأخير في عملية التحكم"),
-    ET.NO_ENTRY: NoEntryAlert("تأخير في عملية التحكم: أعد تشغيل الجهاز"),
-},
+  EventName.controlsdLagging: {
+    ET.SOFT_DISABLE: soft_disable_alert("تأخر في التحكم"),
+    ET.NO_ENTRY: NoEntryAlert("تأخر في عملية التحكم: أعد تشغيل جهازك"),
+  },
 
-EventName.processNotRunning: {
+  # Thrown when manager detects a service exited unexpectedly while driving
+  EventName.processNotRunning: {
     ET.NO_ENTRY: process_not_running_alert,
-    ET.SOFT_DISABLE: soft_disable_alert("العملية غير قيد التشغيل"),
-},
+    ET.SOFT_DISABLE: soft_disable_alert("العملية لا تعمل"),
+  },
 
-EventName.radarFault: {
+  EventName.radarFault: {
     ET.SOFT_DISABLE: soft_disable_alert("خطأ في الرادار: أعد تشغيل السيارة"),
     ET.NO_ENTRY: NoEntryAlert("خطأ في الرادار: أعد تشغيل السيارة"),
-},
+  },
 
-EventName.modeldLagging: {
-    ET.SOFT_DISABLE: soft_disable_alert("تأخير في نموذج القيادة"),
-    ET.NO_ENTRY: NoEntryAlert("تأخير في نموذج القيادة"),
+  # Every frame from the camera should be processed by the model. If modeld
+  # is not processing frames fast enough they have to be dropped. This alert is
+  # thrown when over 20% of frames are dropped.
+  EventName.modeldLagging: {
+    ET.SOFT_DISABLE: soft_disable_alert("تأخر نموذج القيادة"),
+    ET.NO_ENTRY: NoEntryAlert("تأخر نموذج القيادة"),
     ET.PERMANENT: modeld_lagging_alert,
-},
+  },
 
-EventName.posenetInvalid: {
-    ET.SOFT_DISABLE: soft_disable_alert("سرعة Posenet غير صحيحة"),
+  # Besides predicting the path, lane lines and lead car data the model also
+  # predicts the current velocity and rotation speed of the car. If the model is
+  # very uncertain about the current velocity while the car is moving, this
+  # usually means the model has trouble understanding the scene. This is used
+  # as a heuristic to warn the driver.
+  EventName.posenetInvalid: {
+    ET.SOFT_DISABLE: soft_disable_alert("سرعة Posenet غير صالحة"),
     ET.NO_ENTRY: posenet_invalid_alert,
-},
+  },
 
-EventName.deviceFalling: {
-    ET.SOFT_DISABLE: soft_disable_alert("الجهاز سقط من الحامل"),
-    ET.NO_ENTRY: NoEntryAlert("الجهاز سقط من الحامل"),
-},
+  # When the localizer detects an acceleration of more than 40 m/s^2 (~4G) we
+  # alert the driver the device might have fallen from the windshield.
+  EventName.deviceFalling: {
+    ET.SOFT_DISABLE: soft_disable_alert("سقوط الجهاز من الحامل"),
+    ET.NO_ENTRY: NoEntryAlert("سقوط الجهاز من الحامل"),
+  },
 
-EventName.lowMemory: {
-    ET.SOFT_DISABLE: soft_disable_alert("ذاكرة منخفضة: أعد تشغيل الجهاز"),
+  EventName.lowMemory: {
+    ET.SOFT_DISABLE: soft_disable_alert("ذاكرة منخفضة: أعد تشغيل جهازك"),
     ET.PERMANENT: low_memory_alert,
-    ET.NO_ENTRY: NoEntryAlert("ذاكرة منخفضة: أعد تشغيل الجهاز"),
-},
+    ET.NO_ENTRY: NoEntryAlert("ذاكرة منخفضة: أعد تشغيل جهازك"),
+  },
 
-EventName.highCpuUsage: {
+  EventName.highCpuUsage: {
+    #ET.SOFT_DISABLE: soft_disable_alert("خلل في النظام: أعد تشغيل جهازك"),
+    #ET.PERMANENT: NormalPermanentAlert("خلل في النظام", "أعد تشغيل جهازك"),
     ET.NO_ENTRY: high_cpu_usage_alert,
-},
+  },
 
-EventName.accFaulted: {
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("خطأ في نظام تثبيت السرعة: أعد تشغيل السيارة"),
-    ET.PERMANENT: NormalPermanentAlert("خطأ في نظام تثبيت السرعة: أعد تشغيل السيارة للتفعيل"),
-    ET.NO_ENTRY: NoEntryAlert("خطأ في نظام تثبيت السرعة: أعد تشغيل السيارة"),
-},
+  EventName.accFaulted: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("خلل في نظام التحكم: أعد تشغيل السيارة"),
+    ET.PERMANENT: NormalPermanentAlert("خلل في نظام التحكم: أعد تشغيل السيارة للتفعيل"),
+    ET.NO_ENTRY: NoEntryAlert("خلل في نظام التحكم: أعد تشغيل السيارة"),
+  },
 
-EventName.canError: {
+  EventName.espActive: {
+    ET.SOFT_DISABLE: soft_disable_alert("نظام التحكم الإلكتروني بالثبات نشط"),
+    ET.NO_ENTRY: NoEntryAlert("نظام التحكم الإلكتروني بالثبات نشط"),
+  },
+
+  EventName.controlsMismatch: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("عدم تطابق في التحكم"),
+    ET.NO_ENTRY: NoEntryAlert("عدم تطابق في التحكم"),
+  },
+
+  EventName.controlsMismatchLong: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("عدم تطابق في التحكم\nطولي"),
+    ET.NO_ENTRY: NoEntryAlert("عدم تطابق في التحكم\nطولي"),
+  },
+
+  EventName.roadCameraError: {
+    ET.PERMANENT: NormalPermanentAlert("خطأ في كاميرا الطريق CRC",
+                                       duration=1.,
+                                       creation_delay=30.),
+  },
+
+  EventName.wideRoadCameraError: {
+    ET.PERMANENT: NormalPermanentAlert("خطأ في كاميرا الطريق العريضة CRC",
+                                       duration=1.,
+                                       creation_delay=30.),
+  },
+
+  EventName.driverCameraError: {
+    ET.PERMANENT: NormalPermanentAlert("خطأ في كاميرا السائق CRC",
+                                       duration=1.,
+                                       creation_delay=30.),
+  },
+
+  # Sometimes the USB stack on the device can get into a bad state
+  # causing the connection to the panda to be lost
+  EventName.usbError: {
+    ET.SOFT_DISABLE: soft_disable_alert("خطأ في USB: أعد تشغيل جهازك"),
+    ET.PERMANENT: NormalPermanentAlert("خطأ في USB: أعد تشغيل جهازك", ""),
+    ET.NO_ENTRY: NoEntryAlert("خطأ في USB: أعد تشغيل جهازك"),
+  },
+
+# يمكن أن يتم إطلاق هذا التنبيه للأسباب التالية:
+  # - لم يتم استقبال أي بيانات CAN على الإطلاق
+  # - تم استقبال بيانات CAN، ولكن بعض الرسائل لم يتم استقبالها بالتردد الصحيح
+  # إذا لم تكن تقوم بكتابة منفذ سيارة جديد، فعادةً ما يكون السبب هو الأسلاك الخاطئة
+  EventName.canError: {
     ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("خطأ في CAN"),
     ET.PERMANENT: Alert(
-        "خطأ في CAN: تحقق من التوصيلات",
-        "",
-        AlertStatus.normal, AlertSize.small,
-        Priority.LOW, VisualAlert.none, AudibleAlert.none, 1., creation_delay=1.),
+      "خطأ في CAN: تحقق من التوصيلات",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, 1., creation_delay=1.),
     ET.NO_ENTRY: NoEntryAlert("خطأ في CAN: تحقق من التوصيلات"),
-},
+  },
 
-EventName.steerUnavailable: {
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("خطأ في LKAS: أعد تشغيل السيارة"),
-    ET.PERMANENT: NormalPermanentAlert("خطأ في LKAS: أعد تشغيل السيارة للتفعيل"),
-    ET.NO_ENTRY: NoEntryAlert("خطأ في LKAS: أعد تشغيل السيارة"),
-},
-
-EventName.reverseGear: {
+  EventName.canBusMissing: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("تم فصل ناقل CAN"),
     ET.PERMANENT: Alert(
-        "وضع الرجوع",
-        "",
-        AlertStatus.normal, AlertSize.full,
-        Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
-    ET.USER_DISABLE: ImmediateDisableAlert("وضع الرجوع"),
-    ET.NO_ENTRY: NoEntryAlert("وضع الرجوع"),
-},
+      "تم فصل ناقل CAN: كابل معطل على الأرجح",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, 1., creation_delay=1.),
+    ET.NO_ENTRY: NoEntryAlert("تم فصل ناقل CAN: تحقق من التوصيلات"),
+  },
 
-EventName.speedTooHigh: {
+  EventName.steerUnavailable: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("خلل في LKAS: أعد تشغيل السيارة"),
+    ET.PERMANENT: NormalPermanentAlert("خلل في LKAS: أعد تشغيل السيارة للتفعيل"),
+    ET.NO_ENTRY: NoEntryAlert("خلل في LKAS: أعد تشغيل السيارة"),
+  },
+
+  EventName.reverseGear: {
+    ET.PERMANENT: Alert(
+      "الترس العكسي",
+      "",
+      AlertStatus.normal, AlertSize.full,
+      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
+    ET.USER_DISABLE: ImmediateDisableAlert("الترس العكسي"),
+    ET.NO_ENTRY: NoEntryAlert("الترس العكسي"),
+  },
+
+  EventName.spReverseGear: {
+    ET.PERMANENT: Alert(
+      "الترس العكسي",
+      "",
+      AlertStatus.normal, AlertSize.full,
+      Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
+    ET.NO_ENTRY: NoEntryAlert("الترس العكسي"),
+  },
+
+  # في السيارات التي تستخدم نظام ACC الافتراضي، يمكن للسيارة أن تقرر إلغاء ACC لأسباب مختلفة.
+  # عندما يحدث هذا، لا يمكننا التحكم في السيارة بعد الآن، لذا يجب تحذير المستخدم فوراً.
+  EventName.cruiseDisabled: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("تم إيقاف التحكم في السرعة"),
+  },
+
+  # لتخطيط المسار، يتم استخدام التحكم التنبؤي النموذجي (MPC).
+  # هذا هو خوارزمية تحسين غير مضمونة لإيجاد حل قابل للتطبيق.
+  # إذا لم يتم العثور على حل أو كان الحل ذو تكلفة عالية جداً، يتم إطلاق هذا التنبيه.
+  EventName.plannerErrorDEPRECATED: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("خطأ في حل المخطط"),
+    ET.NO_ENTRY: NoEntryAlert("خطأ في حل المخطط"),
+  },
+
+  # عندما يفتح المرحل في صندوق التوصيلات، يتم فصل ناقل CAN بين كاميرا LKAS وبقية السيارة.
+  # عندما يتم استقبال رسائل من كاميرا LKAS على جانب السيارة، فهذا يعني عادةً أن المرحل لم يفتح بشكل صحيح
+  # ويتم إطلاق هذا التنبيه.
+  EventName.relayMalfunction: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("خلل في مرحل التوصيلات"),
+    ET.PERMANENT: NormalPermanentAlert("خلل في مرحل التوصيلات", "تحقق من الأجهزة"),
+    ET.NO_ENTRY: NoEntryAlert("خلل في مرحل التوصيلات"),
+  },
+
+  EventName.speedTooLow: {
+    ET.IMMEDIATE_DISABLE: Alert(
+      "تم إلغاء القائد الآلي",
+      "السرعة منخفضة جداً",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.HIGH, VisualAlert.none, AudibleAlert.disengage, 3.),
+  },
+
+  # عندما تكون السيارة تسير بسرعة أكبر من معظم السيارات في بيانات التدريب، يمكن أن تكون مخرجات النموذج غير متوقعة.
+  EventName.speedTooHigh: {
     ET.WARNING: Alert(
-        "السرعة عالية جداً",
-        "النموذج غير متأكد عند هذه السرعة",
-        AlertStatus.userPrompt, AlertSize.mid,
-        Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 4.),
-    ET.NO_ENTRY: NoEntryAlert("خفف السرعة للتفعيل"),
-},
+      "السرعة عالية جداً",
+      "النموذج غير مؤكد عند هذه السرعة",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.promptRepeat, 4.),
+    ET.NO_ENTRY: NoEntryAlert("تباطأ للتفعيل"),
+  },
 
-EventName.vehicleSensorsInvalid: {
-    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("أجهزة الاستشعار غير صحيحة"),
-    ET.PERMANENT: NormalPermanentAlert("أجهزة الاستشعار قيد المعايرة", "قد السيارة للمعايرة"),
-    ET.NO_ENTRY: NoEntryAlert("أجهزة الاستشعار قيد المعايرة"),
-},
+  EventName.lowSpeedLockout: {
+    ET.PERMANENT: NormalPermanentAlert("خلل في التحكم: أعد تشغيل السيارة للتفعيل"),
+    ET.NO_ENTRY: NoEntryAlert("خلل في التحكم: أعد تشغيل السيارة"),
+  },
+
+  EventName.lkasDisabled: {
+    ET.PERMANENT: NormalPermanentAlert("تم تعطيل LKAS: قم بتفعيل LKAS للتفعيل"),
+    ET.NO_ENTRY: NoEntryAlert("تم تعطيل LKAS"),
+  },
+
+  EventName.vehicleSensorsInvalid: {
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("أجهزة استشعار السيارة غير صالحة"),
+    ET.PERMANENT: NormalPermanentAlert("أجهزة استشعار السيارة قيد المعايرة", "قد لتتم المعايرة"),
+    ET.NO_ENTRY: NoEntryAlert("أجهزة استشعار السيارة قيد المعايرة"),
+  },
+
+  EventName.torqueNNLoad: {
+    ET.PERMANENT: torque_nn_load_alert,
+  },
+
+  EventName.hyundaiRadarTracksAvailable: {
+    ET.PERMANENT: NormalPermanentAlert("مسارات الرادار متاحة. أعد تشغيل السيارة للتهيئة")
+  }
+}
 
 
 if __name__ == '__main__':
