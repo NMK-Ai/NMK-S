@@ -429,16 +429,16 @@ EventName.fcw: {
         "خطر التصادم",
         AlertStatus.critical, AlertSize.full,
         Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.warningSoft, 2.0
-    )
-}
-
+    ),
+},
 
 EventName.ldw: {
     ET.PERMANENT: Alert(
         "تم الكشف عن انحراف عن المسار",
         "",
         AlertStatus.userPrompt, AlertSize.small,
-        Priority.LOW, VisualAlert.ldw, AudibleAlert.prompt, 3.),
+        Priority.LOW, VisualAlert.ldw, AudibleAlert.prompt, 3.0
+    ),
 },
 
 # ********** أحداث تحتوي فقط على تنبيهات تظهر أثناء التفعيل **********
