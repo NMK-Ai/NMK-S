@@ -1,60 +1,60 @@
 {
   "Offroad_TemperatureTooHigh": {
-    "text": "Device temperature too high. System cooling down before starting. Current internal component temperature: %1",
+    "text": "درجة حرارة الجهاز مرتفعة جداً. النظام يحتاج للتبريد قبل البدء. درجة حرارة المكونات الداخلية الحالية: %1",
     "severity": 0
   },
   "Offroad_ConnectivityNeededPrompt": {
-    "text": "Immediately connect to the internet to check for updates. If you do not connect to the internet, openpilot won't engage in %1",
+    "text": "اتصل بالإنترنت فوراً للتحقق من التحديثات. إذا لم تتصل بالإنترنت، لن يعمل القائد الآلي خلال %1",
     "severity": 0,
-    "_comment": "Set extra field to number of days"
+    "_comment": "تحديد الحقل الإضافي لعدد الأيام"
   },
   "Offroad_ConnectivityNeeded": {
-    "text": "Connect to internet to check for updates. openpilot won't automatically start until it connects to internet to check for updates.",
+    "text": "اتصل بالإنترنت للتحقق من التحديثات. لن يبدأ القائد الآلي تلقائياً حتى يتم الاتصال بالإنترنت للتحقق من التحديثات.",
     "severity": 1
   },
   "Offroad_UpdateFailed": {
-    "text": "Unable to download updates\n%1",
+    "text": "فشل في تنزيل التحديثات\n%1",
     "severity": 1,
-    "_comment": "Set extra field to the failed reason."
+    "_comment": "تحديد الحقل الإضافي لسبب الفشل."
   },
   "Offroad_IsTakingSnapshot": {
-    "text": "Taking camera snapshots. System won't start until finished.",
+    "text": "جاري أخذ لقطات من الكاميرا. لن يبدأ النظام حتى يتم الانتهاء.",
     "severity": 0
   },
   "Offroad_NeosUpdate": {
-    "text": "An update to your device's operating system is downloading in the background. You will be prompted to update when it's ready to install.",
+    "text": "يتم حالياً تنزيل تحديث لنظام تشغيل الجهاز في الخلفية. ستتم مطالبتك بالتحديث عند جهوزيته للتثبيت.",
     "severity": 0
   },
   "Offroad_UnofficialHardware": {
-    "text": "Device failed to register. It will not connect to or upload to comma.ai servers, and receives no support from comma.ai. If this is an official device, visit https://comma.ai/support.",
+    "text": "فشل الجهاز في التسجيل. لن يتصل أو يرفع البيانات إلى خوادم nmk.sa، ولن يتلقى أي دعم من nmk.sa. إذا كان هذا جهازاً رسمياً، قم بزيارة https://nmk.sa/support.",
     "severity": 1
   },
   "Offroad_StorageMissing": {
-    "text": "NVMe drive not mounted.",
+    "text": "لم يتم تركيب محرك NVMe.",
     "severity": 1
   },
   "Offroad_BadNvme": {
-    "text": "Unsupported NVMe drive detected. Device may draw significantly more power and overheat due to the unsupported NVMe.",
+    "text": "تم اكتشاف محرك NVMe غير مدعوم. قد يستهلك الجهاز طاقة أكبر بكثير ويزداد سخونة بسبب محرك NVMe غير المدعوم.",
     "severity": 1
   },
   "Offroad_CarUnrecognized": {
-    "text": "openpilot was unable to identify your car. Your car is either unsupported or its ECUs are not recognized. Please submit a pull request to add the firmware versions to the proper vehicle. Need help? Join discord.comma.ai.",
+    "text": "لم يتمكن القائد الآلي من التعرف على سيارتك. إما أن السيارة غير مدعومة أو أن وحدات التحكم الإلكترونية (ECUs) غير معروفة. يرجى إرسال طلب تعديل لإضافة إصدار البرنامج إلى المركبة المناسبة. بحاجة إلى مساعدة؟ انضم إلى discord.nmk.sa.",
     "severity": 0
   },
   "Offroad_NoFirmware": {
-    "text": "openpilot was unable to identify your car. Check integrity of cables and ensure all connections are secure, particularly that the comma power is fully inserted in the OBD-II port of the vehicle. Need help? Join discord.comma.ai.",
+    "text": "لم يتمكن القائد الآلي من التعرف على سيارتك. تحقق من سلامة الكابلات وتأكد من أن جميع التوصيلات محكمة، خصوصاً أن طاقة nmk.sa موصولة بالكامل في منفذ OBD-II للسيارة. بحاجة إلى مساعدة؟ انضم إلى discord.nmk.sa.",
     "severity": 0
   },
   "Offroad_Recalibration": {
-    "text": "openpilot detected a change in the device's mounting position. Ensure the device is fully seated in the mount and the mount is firmly secured to the windshield.",
+    "text": "اكتشف القائد الآلي تغييراً في وضعية تركيب الجهاز. تأكد من أن الجهاز مثبت بشكل كامل في الحامل وأن الحامل مثبت بإحكام على الزجاج الأمامي.",
     "severity": 0
   },
   "Offroad_OSMUpdateRequired": {
-    "text": "OpenStreetMap database is out of date. New maps must be downloaded if you wish to continue using OpenStreetMap data for Enhanced Speed Control and road name display.\n\n%1",
+    "text": "قاعدة بيانات OpenStreetMap قديمة. يجب تنزيل خرائط جديدة إذا كنت ترغب في الاستمرار باستخدام بيانات OpenStreetMap لتحسين التحكم في السرعة وعرض أسماء الطرق.\n\n%1",
     "severity": 0
   },
   "Offroad_ForceStatus": {
-    "text": "sunnypilot is now in Forced Offroad mode. sunnypilot won't start until Forced Offroad mode is disabled. Go to \"Settings\" -> \"Device\" -> \"Unforce Offroad\" to exit Force Offroad mode.",
+    "text": "القائد الآلي الآن في وضع الإيقاف الإجباري. لن يبدأ القائد الآلي حتى يتم تعطيل وضع الإيقاف الإجباري. انتقل إلى \"الإعدادات\" -> \"الجهاز\" -> \"تعطيل الإيقاف الإجباري\" للخروج من وضع الإيقاف الإجباري.",
     "severity": 1
   }
 }
